@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 from accelerate import Accelerator
 
-def trainer(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer, scheduler):
+def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer):
 
     accelerator = Accelerator()
-    dataloader_train, dataloader_val, model, optimizer, scheduler = accelerator.prepare(
-         dataloader_train, dataloader_val, model, optimizer, scheduler)
+    dataloader_train, dataloader_val, model, optimizer = accelerator.prepare(
+         dataloader_train, dataloader_val, model, optimizer)
     total_loss_train = []
     total_loss_val = []
     for epoch in range(epochs):
@@ -28,7 +28,6 @@ def trainer(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer,
             # Update the learning rate
             running_loss += loss.item()
             counter += 1
-        scheduler.step()
         total_loss_train.append(running_loss/counter)
 
         # MODEL EVALUATION
@@ -44,6 +43,9 @@ def trainer(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer,
                 running_vloss += loss.item()
                 vcounter += 1
         total_loss_val.append(running_vloss/vcounter)
+
+        # PRINT THE LOSS
+        print(f"Epoch {epoch+1} - Train Loss: {total_loss_train[-1]} - Validation Loss: {total_loss_val[-1]}")
 
 
 def contrastive_loss(similarity_matrix, labels):
