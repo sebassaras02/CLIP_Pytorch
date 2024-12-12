@@ -10,7 +10,7 @@ from PIL import Image
 
 from transformers import DistilBertTokenizer, AutoImageProcessor
 
-class CLIPChemistry(Dataset):
+class CLIPChemistryDataset(Dataset):
     def __init__(self, limit=None, shape=(224, 224)):
         self.data = pd.read_parquet("hf://datasets/VuongQuoc/Chemistry_text_to_image/data/train-00000-of-00001-f1f5b2eab68f0d2f.parquet")
         if limit is not None:
@@ -39,5 +39,5 @@ class CLIPChemistry(Dataset):
     
     def _preprocess_text(self, text):
         tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-        encoded_input = tokenizer(text, return_tensors='pt')
+        encoded_input = tokenizer(text, return_tensors='pt', padding='max_length', truncation=True, max_length=256)
         return encoded_input['input_ids'], encoded_input['attention_mask']
