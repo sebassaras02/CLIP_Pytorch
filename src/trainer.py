@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from torch import manual_seed
 from torch.optim import Adam
 
-from sklearn.model_selection import train_test_split
+from torch.utils.data import random_split
 
 import numpy as np
 import pandas as pd
@@ -21,11 +21,22 @@ def main():
     # DEFINE DATASET AND DATALOADER
 
     print("Loading dataset...")
-    dataset = CLIPChemistryDataset(limit=10000)
+    dataset = CLIPChemistryDataset(limit=1000)
     print("Dataset loaded.")
-    train, helper = train_test_split(dataset, test_size=0.3, random_state=SEED)
-    val, test = train_test_split(helper, test_size=0.5, random_state=SEED)
+
+    # Calculate split sizes
+    total_size = len(dataset)
+    train_size = int(0.7 * total_size)
+    remaining_size = total_size - train_size
+    val_size = int(0.5 * remaining_size)
+    test_size = remaining_size - val_size
+    
+    # Split the dataset
+    train, helper = random_split(dataset, [train_size, remaining_size])
+    val, test = random_split(helper, [val_size, test_size])
     print("Split dataset into train, validation, and test.")
+
+    # Create dataloaders
     dataloader_train = DataLoader(train, batch_size=32, shuffle=True)
     dataloader_val = DataLoader(val, batch_size=32, shuffle=False)
     dataloader_test = DataLoader(test, batch_size=32, shuffle=False)
@@ -41,10 +52,6 @@ def main():
     model = CLIPChemistryModel(text_encoder=text_encoder, image_encoder=image_encoder)
     print("CLIP Model created.")
 
-    # DEFINE LOSS FUNCTION
-    loss_fn = contrastive_loss()
-    print("Contrastive loss function created.")
-
     # DEFINE OPTIMIZER
     optimizer = Adam(model.parameters(), lr=1e-2)
     print("Adam optimizer created.")
@@ -56,8 +63,9 @@ def main():
         dataloader_train=dataloader_train,
         dataloader_val=dataloader_val,
         epochs=10,
-        loss_fn=loss_fn,
-        optimizer=optimizer
+        loss_fn=contrastive_loss,
+        optimizer=optimizer,
+        device='cuda'
     )
     print("Training complete.")
 
