@@ -25,7 +25,7 @@ class CLIPChemistryDataset(Dataset):
     
     def __getitem__(self, idx):
         image = self.data.loc[idx, 'image']['bytes']
-        image = self._preprocess_image(image).squeeze(0) 
+        image = self._preprocess_image(image)
         label = self.data.loc[idx, 'text']
         input_ids, attention_mask = self._preprocess_text(label)
         return image, input_ids.squeeze(0), attention_mask.squeeze(0) 
@@ -34,8 +34,9 @@ class CLIPChemistryDataset(Dataset):
         image = Image.open(BytesIO(bytes))
         image_tensor = self.image_processor(image, 
             return_tensors="pt", 
-            do_resize=True, 
-            size={"height": 224, "width": 224})['pixel_values']
+            do_resize=True,
+            shape=(224, 224)
+            )['pixel_values']
         return image_tensor
     
     def _preprocess_text(self, text):
