@@ -1,5 +1,3 @@
-from transformers import DistilBertModel
-import torch
 import torch.nn as nn
 
 class TextEncoderHead(nn.Module):

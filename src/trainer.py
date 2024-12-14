@@ -9,7 +9,7 @@ from torch.utils.data import random_split
 import numpy as np
 import pandas as pd
 
-from transformers import DistilBertModel, ViTModel, AutoModelForMaskedLM
+from transformers import DistilBertModel, ViTModel, AutoModelForMaskedLM, ResNetModel
 
 from utils import contrastive_loss, trainer_fn
 
