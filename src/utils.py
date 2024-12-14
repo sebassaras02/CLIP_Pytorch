@@ -32,9 +32,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
     experiment_run_name = "Model " + str(datetime.now().strftime("%Y-%m-%d"))
 
     with mlflow.start_run(run_name=experiment_run_name) as run:
-        
-        model.to(device)
-
+    
         for epoch in tqdm(range(epochs), desc="Training..."):
             # MODEL TRAINING 
             model.train()
@@ -44,9 +42,6 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
                 # Zero the gradients
                 optimizer.zero_grad()
                 image, input_ids, attention_mask = batch
-                image = image.to(device)
-                input_ids = input_ids.to(device)
-                attention_mask = attention_mask.to(device)
 
                 # Forward pass
                 image_embeddings, text_embeddings = model(image, input_ids, attention_mask)
@@ -54,7 +49,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
                 # Calculate the loss
                 loss = loss_fn(image_embeddings, text_embeddings)
                 # Backward pass
-                loss.backward()
+                accelerator.backward(loss)
                 # Optimize the weights
                 optimizer.step()
                 # Update the learning rate
@@ -70,10 +65,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
             with torch.no_grad():
                 for batch in  dataloader_val:
                     image, input_ids, attention_mask = batch
-                    image = image.to(device)
-                    input_ids = input_ids.to(device)
-                    attention_mask = attention_mask.to(device)
-                
+
                     # forward pass
                     image_embeddings, text_embeddings = model(image, input_ids, attention_mask)
 
