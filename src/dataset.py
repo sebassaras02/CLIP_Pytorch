@@ -8,14 +8,16 @@ import pandas as pd
 from io import BytesIO
 from PIL import Image
 
-from transformers import DistilBertTokenizer, ViTImageProcessor
+from transformers import DistilBertTokenizer, ViTImageProcessor, AutoTokenizer, AutoModelForMaskedLM
 
 class CLIPChemistryDataset(Dataset):
     def __init__(self, limit=None, shape=(224, 224)):
         self.data = pd.read_parquet("hf://datasets/VuongQuoc/Chemistry_text_to_image/data/train-00000-of-00001-f1f5b2eab68f0d2f.parquet")
+        if limit:
+            self.data = self.data[:limit]
         self.image_processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224")
-        self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-
+        # self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+        self.tokenizer = AutoTokenizer.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
 
     def __len__(self):
         return len(self.data)
