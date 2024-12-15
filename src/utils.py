@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchsummary import summary
 
 from tqdm import tqdm
 
@@ -12,24 +11,23 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 import dagshub
-
-from accelerator import Accelerator
+from huggingface_hub import upload_file
 
 load_dotenv('../.env')
 dagshub.init(repo_owner='sebassaras02', repo_name='CLIP_Pytorch', mlflow=True)
 
 
-def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer):
-
-    accelerator = Accelerator()
-    model, optimizer, dataloader_train, dataloader_val = accelerator.prepare(model, optimizer, dataloader_train, dataloader_val)
+def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimizer, device):
 
     total_loss_train = []
     total_loss_val = []
 
     best_loss = float('inf')
+    iteration_counter = 0 
     
     experiment_run_name = "Model " + str(datetime.now().strftime("%Y-%m-%d"))
+
+    model = model.to(device)
 
     with mlflow.start_run(run_name=experiment_run_name) as run:
     
@@ -42,6 +40,15 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
                 # Zero the gradients
                 optimizer.zero_grad()
                 image, input_ids, attention_mask = batch
+                image = image.to(device)
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
+
+                # print the shape of the image, input_ids, and attention_mask
+                # print(image.shape, input_ids.shape, attention_mask.shape)
+
+                # print the dtypes of the image, input_ids, and attention_mask
+                # print(image.dtype, input_ids.dtype, attention_mask.dtype)
 
                 # Forward pass
                 image_embeddings, text_embeddings = model(image, input_ids, attention_mask)
@@ -49,7 +56,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
                 # Calculate the loss
                 loss = loss_fn(image_embeddings, text_embeddings)
                 # Backward pass
-                accelerator.backward(loss)
+                loss.backward()
                 # Optimize the weights
                 optimizer.step()
                 # Update the learning rate
@@ -65,6 +72,9 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
             with torch.no_grad():
                 for batch in  dataloader_val:
                     image, input_ids, attention_mask = batch
+                    image = image.to(device)
+                    input_ids = input_ids.to(device)
+                    attention_mask = attention_mask.to(device)
 
                     # forward pass
                     image_embeddings, text_embeddings = model(image, input_ids, attention_mask)
@@ -85,7 +95,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
             mlflow.log_metrics(metrics_epoch, step=epoch)   
 
             # MODEL CHECKPOINT
-            best_loss = model_checkpoint(model, best_loss, running_vloss)     
+            best_loss, iteration_counter = model_checkpoint(model, best_loss, running_vloss)     
 
             # PRINT THE LOSS
             print(f"Epoch {epoch+1} - Train Loss: {running_loss} - Validation Loss: {running_vloss}")
@@ -93,14 +103,30 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
         # LOG THE BEST MODEL
         mlflow.log_artifact("best_model.pth")
 
-def model_checkpoint(model, best_loss, current_loss):
+def model_checkpoint(model, best_loss, current_loss, iteration_counter=0):
+    iteration_counter += 1
+    
     if current_loss < best_loss:
+        # Guardar el mejor modelo localmente
         torch.save(model.state_dict(), "best_model.pth")
-        return current_loss
-    return best_loss
+        
+        # Hacer push solo cada 10 iteraciones
+        if iteration_counter >= 10:
+            print(f"\nHaciendo push del mejor modelo después de {iteration_counter} iteraciones")
+            upload_file(
+                path_or_fileobj="best_model.pth",
+                path_in_repo="best_model.pth",
+                repo_id="sebastiansarasti/clip_chemistry",
+                repo_type="model"
+            )
+            iteration_counter = 0  # Reiniciar contador
+            
+        return current_loss, iteration_counter
+        
+    return best_loss, iteration_counter
 
 
-def contrastive_loss(image_embeddings, text_embeddings, temperature=0.5):
+def contrastive_loss(image_embeddings, text_embeddings, temperature=0.07):
     """
     Compute contrastive loss between image and text embeddings.
     """
@@ -122,7 +148,7 @@ def contrastive_loss(image_embeddings, text_embeddings, temperature=0.5):
     logits = torch.einsum('nc,mc->nm', [image_embeddings, text_embeddings])
     
     # Aplicar escalado por temperatura
-    logits = logits * torch.exp(temperature)
+    logits = logits / temperature
     
     # Crear etiquetas (matriz diagonal)
     labels = torch.arange(batch_size, device=image_embeddings.device)

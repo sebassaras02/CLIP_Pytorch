@@ -1,6 +1,5 @@
 from torch.utils.data import Dataset
-from torchvision.transforms import Resize, Compose, ToTensor
-
+import torch
 
 import numpy as np
 import pandas as pd
@@ -15,8 +14,8 @@ class CLIPChemistryDataset(Dataset):
         self.data = pd.read_parquet("hf://datasets/VuongQuoc/Chemistry_text_to_image/data/train-00000-of-00001-f1f5b2eab68f0d2f.parquet")
         if limit:
             self.data = self.data[:limit]
-        # self.image_processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224")
-        self.image_processor = AutoImageProcessor.from_pretrained("microsoft/resnet-18")
+        self.image_processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224")
+        # self.image_processor = AutoImageProcessor.from_pretrained("microsoft/resnet-18")
         # self.tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
         self.tokenizer = AutoTokenizer.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
 
@@ -28,14 +27,13 @@ class CLIPChemistryDataset(Dataset):
         image = self._preprocess_image(image)
         label = self.data.loc[idx, 'text']
         input_ids, attention_mask = self._preprocess_text(label)
-        return image, input_ids.squeeze(0), attention_mask.squeeze(0) 
+        return image.squeeze(0), input_ids.squeeze(0), attention_mask.squeeze(0) 
     
     def _preprocess_image(self, bytes):
         image = Image.open(BytesIO(bytes))
         image_tensor = self.image_processor(image, 
             return_tensors="pt", 
-            do_resize=True,
-            shape=(224, 224)
+            do_resize=True
             )['pixel_values']
         return image_tensor
     

@@ -45,8 +45,8 @@ def main():
     # DEFINE FOUNDATIONAL MODELS
     # ENCODER_BASE = DistilBertModel.from_pretrained("distilbert-base-uncased")
     ENCODER_BASE = AutoModelForMaskedLM.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
-    # IMAGE_BASE = ViTModel.from_pretrained("google/vit-base-patch16-224")
-    IMAGE_BASE = ResNetModel.from_pretrained("microsoft/resnet-18")
+    IMAGE_BASE = ViTModel.from_pretrained("google/vit-base-patch16-224")
+    # IMAGE_BASE = ResNetModel.from_pretrained("microsoft/resnet-18")
     text_encoder = TextEncoderHead(model=ENCODER_BASE)
     print("Text encoder created.")
     image_encoder = ImageEncoderHead(model=IMAGE_BASE)
@@ -66,7 +66,8 @@ def main():
         dataloader_val=dataloader_val,
         epochs=20,
         loss_fn=contrastive_loss,
-        optimizer=optimizer
+        optimizer=optimizer,
+        device="mps"
     )
     print("Training complete.")
 
