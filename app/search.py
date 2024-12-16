@@ -1,6 +1,7 @@
-from transformers import ViTModel, AutoModelForMaskedLM, AutoTokenizer, ViTImageProcessor
+from transformers import ViTModel, AutoModelForMaskedLM, AutoTokenizer, ViTImageProcessor, DistilBertModel
 from pinecone import Pinecone
 from dotenv import load_dotenv
+import torch
 
 
 load_dotenv('../.env')
@@ -19,18 +20,21 @@ sys.path.append('../src')
 from model import CLIPChemistryModel, TextEncoderHead, ImageEncoderHead
 
 
-ENCODER_BASE = AutoModelForMaskedLM.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
+ENCODER_BASE = DistilBertModel.from_pretrained("distilbert-base-uncased")
 IMAGE_BASE = ViTModel.from_pretrained("google/vit-base-patch16-224")
 text_encoder = TextEncoderHead(model=ENCODER_BASE)
 image_encoder = ImageEncoderHead(model=IMAGE_BASE)
 
 clip_model = CLIPChemistryModel(text_encoder=text_encoder, image_encoder=image_encoder)
 
+clip_model.load_state_dict(torch.load('/Users/sebastianalejandrosarastizambonino/Documents/projects/CLIP_Pytorch/src/best_model_fashion.pth', map_location=torch.device('cpu')))
+
 te_final = clip_model.text_encoder
 ie_final = clip_model.image_encoder
 
 def process_text_for_encoder(text, model):
-    tokenizer = AutoTokenizer.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
+    # tokenizer = AutoTokenizer.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     encoded_input = tokenizer(text, return_tensors='pt', padding='max_length', truncation=True, max_length=256)
     input_ids = encoded_input['input_ids']
     attention_mask = encoded_input['attention_mask']
@@ -51,13 +55,13 @@ def process_image_for_encoder(image, model):
 def search_similarity(input, mode, top_k=5):
     if mode == 'text':
         output = process_text_for_encoder(input, model=te_final)
-    
-    output = input
+    else:
+        output = input
     
     if mode == 'text':
         mode_search = 'image'
         response = index.query(
-            namespace="space-" + mode_search,
+            namespace="space-" + mode_search + "-fashion",
             vector=output,
             top_k=top_k,
             include_values=True,
@@ -68,7 +72,7 @@ def search_similarity(input, mode, top_k=5):
     elif mode == 'image':
         mode_search = 'text'
         response = index.query(
-            namespace="space-" + mode_search,
+            namespace="space-" + mode_search + "-fashion",
             vector=output,
             top_k=top_k,
             include_values=True,

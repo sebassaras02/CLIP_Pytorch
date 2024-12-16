@@ -43,8 +43,8 @@ def main():
     print("Data loaders created.")
 
     # DEFINE FOUNDATIONAL MODELS
-    # ENCODER_BASE = DistilBertModel.from_pretrained("distilbert-base-uncased")
-    ENCODER_BASE = AutoModelForMaskedLM.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
+    ENCODER_BASE = DistilBertModel.from_pretrained("distilbert-base-uncased")
+    # ENCODER_BASE = AutoModelForMaskedLM.from_pretrained("seyonec/ChemBERTa-zinc-base-v1")
     IMAGE_BASE = ViTModel.from_pretrained("google/vit-base-patch16-224")
     # IMAGE_BASE = ResNetModel.from_pretrained("microsoft/resnet-18")
     text_encoder = TextEncoderHead(model=ENCODER_BASE)
@@ -55,7 +55,7 @@ def main():
     print("CLIP Model created.")
 
     # DEFINE OPTIMIZER
-    optimizer = Adam(model.parameters(), lr=3e-2)
+    optimizer = Adam(model.parameters(), lr=3e-1)
     print("Adam optimizer created.")
 
     # DEFINE SCHEDULER
@@ -64,7 +64,7 @@ def main():
         model=model,
         dataloader_train=dataloader_train,
         dataloader_val=dataloader_val,
-        epochs=20,
+        epochs=10,
         loss_fn=contrastive_loss,
         optimizer=optimizer,
         device="mps"

@@ -7,9 +7,18 @@ class TextEncoderHead(nn.Module):
         self.model = model
         for param in self.model.parameters():
             param.requires_grad = False
+        # uncomment this for chemberta
+        # self.seq1 = nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.Linear(767*256, 2000),
+        #     nn.Dropout(0.3),
+        #     nn.ReLU(),
+        #     nn.Linear(2000, 512),
+        #     nn.LayerNorm(512)
+        # )
         self.seq1 = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(767*256, 2000),
+            nn.Linear(768*256, 2000),
             nn.Dropout(0.3),
             nn.ReLU(),
             nn.Linear(2000, 512),
@@ -18,7 +27,9 @@ class TextEncoderHead(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-        outputs = outputs.logits
+        # uncomment this for chemberta
+        # outputs = outputs.logits
+        outputs = outputs.last_hidden_state
         outputs = self.seq1(outputs)
         return outputs.contiguous()
     

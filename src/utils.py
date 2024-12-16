@@ -25,7 +25,7 @@ def trainer_fn(model, dataloader_train, dataloader_val, epochs, loss_fn, optimiz
     best_loss = float('inf')
     iteration_counter = 0 
     
-    experiment_run_name = "Model " + str(datetime.now().strftime("%Y-%m-%d"))
+    experiment_run_name = "Model " + str(datetime.now().strftime("%Y-%m-%d")) + "fashion"
 
     model = model.to(device)
 
@@ -111,12 +111,12 @@ def model_checkpoint(model, best_loss, current_loss, iteration_counter=0):
         torch.save(model.state_dict(), "best_model.pth")
         
         # Hacer push solo cada 10 iteraciones
-        if iteration_counter >= 10:
+        if iteration_counter >= 20:
             print(f"\nHaciendo push del mejor modelo después de {iteration_counter} iteraciones")
             upload_file(
                 path_or_fileobj="best_model.pth",
                 path_in_repo="best_model.pth",
-                repo_id="sebastiansarasti/clip_chemistry",
+                repo_id="sebastiansarasti/clip_fashion",
                 repo_type="model"
             )
             iteration_counter = 0  # Reiniciar contador
